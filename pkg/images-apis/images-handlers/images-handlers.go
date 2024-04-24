@@ -1,4 +1,4 @@
-package scans_handlers
+package images_handlers
 
 import (
 	"encoding/json"
@@ -13,10 +13,13 @@ type Scan struct {
 	USERNAME     string `json:"username"`
 	SCANLOCATION string `json:"scanlocation"`
 	IMAGEURL     string `json:"imageurl"`
+	DATECREATED  string `json:"datecreated"`
+	TIMECREATED  string `json:"timecreated"`
+	IMAGE        []byte `json:"image"`
 }
 
 // TODO: Implement concurrency when model is ready to send picture to model and db at once
-func PostScanHandler(c *gin.Context) {
+func PostImageHandler(c *gin.Context) {
 	err := c.Request.ParseMultipartForm(10 << 20) // 10 MB max
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -26,6 +29,8 @@ func PostScanHandler(c *gin.Context) {
 	// Other fields from JSON payload
 	username := c.Request.FormValue("username")
 	scanLocation := c.Request.FormValue("scanlocation")
+	datecreated := c.Request.FormValue("datecreated")
+	timecreated := c.Request.FormValue("timecreated")
 
 	//getting the image
 	image, header, imageErr := c.Request.FormFile("image")
@@ -37,7 +42,7 @@ func PostScanHandler(c *gin.Context) {
 	fmt.Println(header)
 
 	//sending image to cloud storage
-	imageURL, uploadErr := GoogleCloudHandler(username, scanLocation, image)
+	imageURL, uploadErr := GoogleCloudUploadHandler(username, scanLocation, image)
 	if err != nil {
 		fmt.Printf("Cloud storage upload failed: %v", uploadErr)
 	}
@@ -47,12 +52,14 @@ func PostScanHandler(c *gin.Context) {
 		USERNAME:     username,
 		SCANLOCATION: scanLocation,
 		IMAGEURL:     imageURL,
+		DATECREATED:  datecreated,
+		TIMECREATED:  timecreated,
 	}
 
 	//TODO: find a fix for image going to cloud store but potentially not going to db
 
 	//Using exec to insert data into db
-	_, dbErr := database.Db.Exec("INSERT INTO scanstable(username, scanlocation, imageurl) values ($1, $2, $3)", scan.USERNAME, scan.SCANLOCATION, scan.IMAGEURL)
+	_, dbErr := database.Db.Exec("INSERT INTO images(username, scan_location, image_url, date_created, time_created) values ($1, $2, $3, $4, $5)", scan.USERNAME, scan.SCANLOCATION, scan.IMAGEURL, scan.DATECREATED, scan.TIMECREATED)
 	if dbErr != nil {
 		fmt.Println(dbErr)
 		c.AbortWithStatusJSON(400, "Could not add scan")
@@ -62,10 +69,13 @@ func PostScanHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, "Scan added successfully")
 }
 
-func GetScansHandler(c *gin.Context) {
+func GetImagesHandler(c *gin.Context) {
 	//TODO: add download scan functionality then return it as image to user
 	// Query scans from the database
-	rows, err := database.Db.Query("SELECT scanlocation, imageurl FROM scanstable")
+
+	//user username
+	username := c.Param("username")
+	rows, err := database.Db.Query("SELECT username, scan_location,image_url, date_created, time_created FROM images WHERE username = $1", username)
 	if err != nil {
 		fmt.Println(err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch scans"})
@@ -79,17 +89,21 @@ func GetScansHandler(c *gin.Context) {
 	// Iterate through the result set
 	for rows.Next() {
 		var scanLocation string
-		var imageURL string
+		var username string
+		var imageurl string
+		var datecreated string
+		var timecreated string
 
 		// Scan values from the result set into variables
-		if err := rows.Scan(&scanLocation, &imageURL); err != nil {
+		if err := rows.Scan(&username, &scanLocation, &imageurl, &datecreated, &timecreated); err != nil {
 			fmt.Println(err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch scans"})
 			return
 		}
 
 		// Create a Scan object and append it to the scans slice
-		scans = append(scans, Scan{SCANLOCATION: scanLocation, IMAGEURL: imageURL})
+		scans = append(scans, Scan{USERNAME: username, SCANLOCATION: scanLocation, IMAGEURL: imageurl, DATECREATED: datecreated})
+
 	}
 
 	// Check for any errors encountered during iteration
