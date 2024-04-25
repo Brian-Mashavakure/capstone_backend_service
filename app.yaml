@@ -1,5 +1,4 @@
 runtime: go122
-api_version: go1
 env: standard
 handlers:
   - url: /.*
