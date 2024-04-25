@@ -102,7 +102,7 @@ func GetImagesHandler(c *gin.Context) {
 		}
 
 		// Create a Scan object and append it to the scans slice
-		scans = append(scans, Scan{USERNAME: username, SCANLOCATION: scanLocation, IMAGEURL: imageurl, DATECREATED: datecreated})
+		scans = append(scans, Scan{USERNAME: username, SCANLOCATION: scanLocation, IMAGEURL: imageurl, DATECREATED: datecreated, TIMECREATED: timecreated})
 
 	}
 
