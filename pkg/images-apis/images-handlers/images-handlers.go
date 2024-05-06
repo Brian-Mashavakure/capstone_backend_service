@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	"net/http"
+	"time"
 )
 
 type Scan struct {
@@ -31,6 +32,7 @@ func PostImageHandler(c *gin.Context) {
 	scanLocation := c.Request.FormValue("scanlocation")
 	datecreated := c.Request.FormValue("datecreated")
 	timecreated := c.Request.FormValue("timecreated")
+	updated_at := time.Now()
 
 	//getting the image
 	image, header, imageErr := c.Request.FormFile("image")
@@ -59,7 +61,7 @@ func PostImageHandler(c *gin.Context) {
 	//TODO: find a fix for image going to cloud store but potentially not going to db
 
 	//Using exec to insert data into db
-	_, dbErr := database.Db.Exec("INSERT INTO images(username, scan_location, image_url, date_created, time_created) values ($1, $2, $3, $4, $5)", scan.USERNAME, scan.SCANLOCATION, scan.IMAGEURL, scan.DATECREATED, scan.TIMECREATED)
+	_, dbErr := database.Db.Exec("INSERT INTO images(username, scan_location, image_url, date_created, time_created, updated_at) values ($1, $2, $3, $4, $5, $6)", scan.USERNAME, scan.SCANLOCATION, scan.IMAGEURL, scan.DATECREATED, scan.TIMECREATED, updated_at.Format("2006-01-02 15:01:05"))
 	if dbErr != nil {
 		fmt.Println(dbErr)
 		c.AbortWithStatusJSON(400, "Could not add scan")
