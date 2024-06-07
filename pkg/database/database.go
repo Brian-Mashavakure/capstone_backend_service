@@ -17,19 +17,28 @@ func DatabaseConnect() {
 		fmt.Println("Error occurred on .env file please check")
 	}
 
-	//read env file
-	host := os.Getenv("Host")
+	// Read environment variables
+	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")
-	user := os.Getenv("USER")
+	//user := os.Getenv("USER")
 	dbName := os.Getenv("DB_NAME")
 	password := os.Getenv("PASSWORD")
 
-	//set up postgres and open it
-	postgresSetup := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", host, port, user, dbName, password)
+	// Print environment variables for debugging
+	fmt.Println("HOST:", host)
+	fmt.Println("PORT:", port)
+	//fmt.Println("USER:", user)
+	fmt.Println("DB_NAME:", dbName)
+	fmt.Println("PASSWORD:", password)
+
+	// Set up postgres and open it
+	postgresSetup := fmt.Sprintf("host=%s port=%s user=postgres dbname=%s password=%s sslmode=disable", host, port, dbName, password)
+	fmt.Println("Connection String:", postgresSetup) // Debugging line
+
 	db, errSql := sql.Open("postgres", postgresSetup)
 	if errSql != nil {
-		fmt.Println("There was an error trying to connect to the database", err)
-		panic(err)
+		fmt.Println("There was an error trying to connect to the database:", errSql)
+		panic(errSql)
 	} else {
 		Db = db
 		fmt.Println("Successfully connected to the database")

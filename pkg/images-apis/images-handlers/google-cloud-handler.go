@@ -107,29 +107,41 @@ func GoogleCloudDownloadHandler(username string, scanlocation string) ([]byte, e
 }
 
 func GetSignedUrlHandler(bucketName string, objectName string) (string, error) {
+	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
-		fmt.Println("Error occurred on .env file please check")
+		fmt.Println("Error loading .env file:", err)
+		return "", err
 	}
 
-	gcpCredentials := os.Getenv("GCP_Credentials")
+	// Get the path to the service account key file from the environment variable
+	gcpCredentials := os.Getenv("GCP_CREDENTIALS")
+	if gcpCredentials == "" {
+		return "", fmt.Errorf("GCP_CREDENTIALS environment variable is not set")
+	}
 
+	// Print the path to verify it's correctly set
+	fmt.Println("GCP_Credentials:", gcpCredentials)
+
+	// Create a new client using the service account key file
 	ctx := context.Background()
 	client, err := storage.NewClient(ctx, option.WithCredentialsFile(gcpCredentials))
 	if err != nil {
-		return " ", fmt.Errorf("Storage.NewClient: %w", err)
+		return "", fmt.Errorf("Storage.NewClient: %w", err)
 	}
 	defer client.Close()
 
+	// Set up the options for generating a signed URL
 	opts := &storage.SignedURLOptions{
 		Scheme:  storage.SigningSchemeV4,
 		Method:  "GET",
-		Expires: time.Now().Add(10080 * time.Minute),
+		Expires: time.Now().Add(10080 * time.Minute), // URL expires in 7 days
 	}
 
+	// Generate the signed URL
 	url, urlErr := client.Bucket(bucketName).SignedURL(objectName, opts)
 	if urlErr != nil {
-		return "", fmt.Errorf("Bucket: %q and URL : %w failed", bucketName, urlErr)
+		return "", fmt.Errorf("Bucket: %q and URL: %w failed", bucketName, urlErr)
 	}
 
 	return url, nil
