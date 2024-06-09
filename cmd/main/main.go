@@ -12,6 +12,6 @@ func main() {
 
 	images_routes.ImageRoutes(router)
 
-	router.Run("localhost:8080")
+	router.Run("192.168.56.253:8080")
 
 }
